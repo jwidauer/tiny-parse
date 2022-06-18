@@ -6,31 +6,21 @@ project('tiny-parse', 'cpp',
 # not the executables that use the library.
 lib_args = ['-DBUILDING_TINY_PARSE']
 
-shlib = shared_library('tiny_parse', 'tiny_parse.hpp',
-  install : true,
-  cpp_args : lib_args,
-  gnu_symbol_visibility : 'hidden',
-)
+include_dir = include_directories('include')
 
-test_exe = executable('tiny_parse_test', 'tiny_parse_test.cpp',
-  link_with : shlib)
-test('tiny_parse', test_exe)
+subdir('include/tiny_parse')
 
 # Make this library usable as a Meson subproject.
-tiny_parse_dep = declare_dependency(
-  include_directories: include_directories('.'),
-  link_with : shlib)
+tiny_parse = declare_dependency(include_directories: include_dir)
 
-# Make this library usable from the system's
-# package manager.
-install_headers('tiny_parse.hpp', subdir : 'tiny_parse')
+subdir('test')
+subdir('examples')
 
 pkg_mod = import('pkgconfig')
 pkg_mod.generate(
   name : 'tiny-parse',
   filebase : 'tiny_parse',
-  description : 'Meson sample project.',
+  description : 'A tiny library for building string parsers.',
   subdirs : 'tiny_parse',
-  libraries : shlib,
   version : '0.1',
 )

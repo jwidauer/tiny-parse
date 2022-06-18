@@ -33,3 +33,6 @@
 
 # Build directories
 build*
+
+# VS Code directory
+.vscode
