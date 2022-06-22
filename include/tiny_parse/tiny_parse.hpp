@@ -1,4 +1,5 @@
 #pragma once
+
 #if defined _WIN32 || defined __CYGWIN__
 #ifdef BUILDING_TINY_PARSE
 #define TINY_PARSE_PUBLIC __declspec(dllexport)
@@ -23,19 +24,36 @@ using TINY_PARSE_PUBLIC Consumer = std::function<void(const std::string_view&)>;
 class TINY_PARSE_PUBLIC Parser {
  public:
   Parser() : consumer_{} {};
-  Parser(const Consumer& consumer) : consumer_{consumer} {}
+  explicit Parser(const Consumer& consumer) : consumer_{consumer} {}
   virtual ~Parser() = default;
 
+  /**
+   * @brief Set the consumer of the parsed string.
+   *
+   * @param consumer The consumer to invoce on a successful parse.
+   */
   void consumer(const Consumer& consumer) { consumer_ = consumer; }
 
+  /**
+   * @brief Parse the given string and apply the consumer on a full parse
+   *
+   * @param sv The string to parse
+   * @return std::string_view The unparsed rest of the input
+   */
   inline std::string_view parse(const std::string_view& sv) const {
     const auto result = parse_it(sv);
 
-    if (consumer_ && result.size() < sv.size())
+    if (consumer_ && min_length() < (sv.size() - result.size()))
       consumer_(sv.substr(0, sv.size() - result.size()));
 
     return result;
   }
+
+  /**
+   * @brief The minimum number of parsed characters that constitute a full
+   * parse
+   */
+  virtual size_t min_length() const = 0;
 
  protected:
   virtual std::string_view parse_it(const std::string_view& sv) const = 0;
@@ -46,6 +64,9 @@ class TINY_PARSE_PUBLIC Parser {
 
 template <char C>
 class TINY_PARSE_PUBLIC CharP : public Parser {
+ public:
+  constexpr size_t min_length() const override { return 1; }
+
  protected:
   constexpr std::string_view parse_it(
       const std::string_view& sv) const override {
@@ -58,6 +79,10 @@ template <class T, class S>
 class TINY_PARSE_PUBLIC Or : public Parser {
  public:
   Or(const T& p1, const S& p2) : parser1_{p1}, parser2_{p2} {}
+
+  constexpr size_t min_length() const override {
+    return std::min(parser1_.min_length(), parser2_.min_length());
+  }
 
  protected:
   constexpr std::string_view parse_it(
@@ -79,6 +104,10 @@ class TINY_PARSE_PUBLIC Then : public Parser {
  public:
   Then(const T& p1, const S& p2) : parser1_{p1}, parser2_{p2} {}
 
+  constexpr size_t min_length() const override {
+    return parser1_.min_length() + parser2_.min_length();
+  }
+
  protected:
   constexpr std::string_view parse_it(
       const std::string_view& sv) const override {
@@ -94,6 +123,8 @@ template <class T>
 class TINY_PARSE_PUBLIC More : public Parser {
  public:
   More(const T& parser) : parser_{parser} {}
+
+  constexpr size_t min_length() const override { return 0; }
 
  protected:
   constexpr std::string_view parse_it(

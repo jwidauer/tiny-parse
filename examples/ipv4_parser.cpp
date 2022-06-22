@@ -34,11 +34,12 @@ class Validator {
 int main() {
   using namespace tiny_parse;
 
+  Validator validator;
+
+  // Define what constitutes a digit
   auto digit = CharP<'0'>{} || CharP<'1'>{} || CharP<'2'>{} || CharP<'3'>{} ||
                CharP<'4'>{} || CharP<'5'>{} || CharP<'6'>{} || CharP<'7'>{} ||
                CharP<'8'>{} || CharP<'9'>{};
-
-  Validator validator;
 
   auto byte = ++digit;
   byte.consumer(
