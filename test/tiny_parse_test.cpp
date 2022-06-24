@@ -7,7 +7,7 @@ int main() {
 
   std::string_view sv{"ttest str"};
 
-  auto parser = (CharP<'c'>{} || ++CharP<'t'>{}) && CharP<'e'>{};
+  auto parser = (CharP<'c'>{} | ++CharP<'t'>{}) & CharP<'e'>{};
   parser.consumer([](const auto& sv) { std::cout << sv << std::endl; });
   const auto result = parser.parse(sv);
 

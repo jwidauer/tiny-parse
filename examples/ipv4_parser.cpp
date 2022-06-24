@@ -37,16 +37,16 @@ int main() {
   Validator validator;
 
   // Define what constitutes a digit
-  auto digit = CharP<'0'>{} || CharP<'1'>{} || CharP<'2'>{} || CharP<'3'>{} ||
-               CharP<'4'>{} || CharP<'5'>{} || CharP<'6'>{} || CharP<'7'>{} ||
-               CharP<'8'>{} || CharP<'9'>{};
+  auto digit = CharP<'0'>{} | CharP<'1'>{} | CharP<'2'>{} | CharP<'3'>{} |
+               CharP<'4'>{} | CharP<'5'>{} | CharP<'6'>{} | CharP<'7'>{} |
+               CharP<'8'>{} | CharP<'9'>{};
 
   auto byte = ++digit;
   byte.consumer(
       std::bind(&Validator::validate_byte, &validator, std::placeholders::_1));
 
   auto dot = CharP<'.'>{};
-  auto ip_parser = byte && dot && byte && dot && byte && dot && byte;
+  auto ip_parser = byte & dot & byte & dot & byte & dot & byte;
 
   ip_parser.consumer(std::bind(&Validator::validate_four_bytes, &validator,
                                std::placeholders::_1));

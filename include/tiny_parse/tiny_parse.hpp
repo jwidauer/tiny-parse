@@ -14,6 +14,7 @@
 #endif
 #endif
 
+#include <algorithm>
 #include <functional>
 #include <string_view>
 
@@ -43,7 +44,7 @@ class TINY_PARSE_PUBLIC Parser {
   inline std::string_view parse(const std::string_view& sv) const {
     const auto result = parse_it(sv);
 
-    if (consumer_ && min_length() < (sv.size() - result.size()))
+    if (consumer_ && min_length() <= (sv.size() - result.size()))
       consumer_(sv.substr(0, sv.size() - result.size()));
 
     return result;
@@ -122,7 +123,7 @@ class TINY_PARSE_PUBLIC Then : public Parser {
 template <class T>
 class TINY_PARSE_PUBLIC More : public Parser {
  public:
-  More(const T& parser) : parser_{parser} {}
+  explicit More(const T& parser) : parser_{parser} {}
 
   constexpr size_t min_length() const override { return 0; }
 
@@ -143,23 +144,45 @@ class TINY_PARSE_PUBLIC More : public Parser {
   T parser_;
 };
 
+template <class T>
+class TINY_PARSE_PUBLIC Optional : public Parser {
+ public:
+  explicit Optional(const T& parser) : parser_{parser} {}
+
+  constexpr size_t min_length() const override { return 0; }
+
+ protected:
+  constexpr std::string_view parse_it(
+      const std::string_view& sv) const override {
+    return parser_.parse(sv);
+  }
+
+ private:
+  T parser_;
+};
+
 std::string_view operator>>(const std::string_view& sv, const Parser& parser) {
   return parser.parse(sv);
 }
 
 template <class T, class S>
-constexpr Or<T, S> operator||(const T& p1, const S& p2) {
+constexpr Or<T, S> operator|(const T& p1, const S& p2) {
   return Or<T, S>{p1, p2};
 }
 
 template <class T, class S>
-constexpr Then<T, S> operator&&(const T& p1, const S& p2) {
+constexpr Then<T, S> operator&(const T& p1, const S& p2) {
   return Then<T, S>{p1, p2};
 }
 
 template <class T>
 constexpr More<T> operator++(const T& parser) {
   return More<T>{parser};
+}
+
+template <class T>
+constexpr Optional<T> operator~(const T& parser) {
+  return Optional<T>{parser};
 }
 
 }  // namespace tiny_parse
