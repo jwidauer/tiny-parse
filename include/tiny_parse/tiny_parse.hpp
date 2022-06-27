@@ -161,27 +161,28 @@ class TINY_PARSE_PUBLIC Optional : public Parser {
   T parser_;
 };
 
-std::string_view operator>>(const std::string_view& sv, const Parser& parser) {
+inline TINY_PARSE_PUBLIC std::string_view operator>>(const std::string_view& sv,
+                                                     const Parser& parser) {
   return parser.parse(sv);
 }
 
 template <class T, class S>
-constexpr Or<T, S> operator|(const T& p1, const S& p2) {
+constexpr TINY_PARSE_PUBLIC Or<T, S> operator|(const T& p1, const S& p2) {
   return Or<T, S>{p1, p2};
 }
 
 template <class T, class S>
-constexpr Then<T, S> operator&(const T& p1, const S& p2) {
+constexpr TINY_PARSE_PUBLIC Then<T, S> operator&(const T& p1, const S& p2) {
   return Then<T, S>{p1, p2};
 }
 
 template <class T>
-constexpr More<T> operator++(const T& parser) {
+constexpr TINY_PARSE_PUBLIC More<T> operator++(const T& parser) {
   return More<T>{parser};
 }
 
 template <class T>
-constexpr Optional<T> operator~(const T& parser) {
+constexpr TINY_PARSE_PUBLIC Optional<T> operator~(const T& parser) {
   return Optional<T>{parser};
 }
 
