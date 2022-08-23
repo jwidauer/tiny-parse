@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <system_error>
+#include <tiny_parse/built_in.hpp>
 #include <tiny_parse/tiny_parse.hpp>
 
 class Validator {
@@ -38,15 +39,11 @@ int main() {
   Validator validator;
 
   // Define what constitutes a digit
-  auto digit = CharP<'0'>{} | CharP<'1'>{} | CharP<'2'>{} | CharP<'3'>{} |
-               CharP<'4'>{} | CharP<'5'>{} | CharP<'6'>{} | CharP<'7'>{} |
-               CharP<'8'>{} | CharP<'9'>{};
-
-  auto byte = ++digit;
+  auto byte = ++built_in::digit;
   byte.consumer(
       std::bind(&Validator::validate_byte, &validator, std::placeholders::_1));
 
-  auto dot = CharP<'.'>{};
+  auto dot = built_in::CharP<'.'>{};
   auto ip_parser = byte & dot & byte & dot & byte & dot & byte;
 
   ip_parser.consumer(std::bind(&Validator::validate_four_bytes, &validator,

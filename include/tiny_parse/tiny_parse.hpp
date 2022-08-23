@@ -64,18 +64,10 @@ class TINY_PARSE_PUBLIC Parser {
   Consumer consumer_;
 };
 
-template <char C>
-class TINY_PARSE_PUBLIC CharP : public Parser {
- public:
-  constexpr size_t min_length() const override { return 1; }
-
- protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
-    if (!sv.empty() && sv.front() == C) return sv.substr(1);
-    return sv;
-  }
-};
+inline TINY_PARSE_PUBLIC std::string_view operator>>(const std::string_view& sv,
+                                                     const Parser& parser) {
+  return parser.parse(sv);
+}
 
 template <class T, class S>
 class TINY_PARSE_PUBLIC Or : public Parser {
@@ -102,6 +94,11 @@ class TINY_PARSE_PUBLIC Or : public Parser {
 };
 
 template <class T, class S>
+constexpr TINY_PARSE_PUBLIC Or<T, S> operator|(const T& p1, const S& p2) {
+  return Or<T, S>{p1, p2};
+}
+
+template <class T, class S>
 class TINY_PARSE_PUBLIC Then : public Parser {
  public:
   Then(const T& p1, const S& p2) : parser1_{p1}, parser2_{p2} {}
@@ -113,13 +110,25 @@ class TINY_PARSE_PUBLIC Then : public Parser {
  protected:
   constexpr std::string_view parse_it(
       const std::string_view& sv) const override {
-    return sv >> parser1_ >> parser2_;
+    auto tmp = parser1_.parse(sv);
+    const auto len = tmp.size();
+
+    if (len == sv.size()) return tmp;
+    tmp = parser2_.parse(tmp);
+
+    if (tmp.size() == len) return sv;
+    return tmp;
   }
 
  private:
   T parser1_;
   S parser2_;
 };
+
+template <class T, class S>
+constexpr TINY_PARSE_PUBLIC Then<T, S> operator&(const T& p1, const S& p2) {
+  return Then<T, S>{p1, p2};
+}
 
 template <class T>
 class TINY_PARSE_PUBLIC More : public Parser {
@@ -146,6 +155,16 @@ class TINY_PARSE_PUBLIC More : public Parser {
 };
 
 template <class T>
+constexpr TINY_PARSE_PUBLIC More<T> operator++(const T& parser) {
+  return More<T>{parser};
+}
+
+/**
+ * @brief A parser that optionally matches the given parser.
+ *
+ * @tparam T The parser to match
+ */
+template <class T>
 class TINY_PARSE_PUBLIC Optional : public Parser {
  public:
   explicit Optional(const T& parser) : parser_{parser} {}
@@ -162,29 +181,51 @@ class TINY_PARSE_PUBLIC Optional : public Parser {
   T parser_;
 };
 
-inline TINY_PARSE_PUBLIC std::string_view operator>>(const std::string_view& sv,
-                                                     const Parser& parser) {
-  return parser.parse(sv);
-}
-
-template <class T, class S>
-constexpr TINY_PARSE_PUBLIC Or<T, S> operator|(const T& p1, const S& p2) {
-  return Or<T, S>{p1, p2};
-}
-
-template <class T, class S>
-constexpr TINY_PARSE_PUBLIC Then<T, S> operator&(const T& p1, const S& p2) {
-  return Then<T, S>{p1, p2};
-}
-
-template <class T>
-constexpr TINY_PARSE_PUBLIC More<T> operator++(const T& parser) {
-  return More<T>{parser};
-}
-
 template <class T>
 constexpr TINY_PARSE_PUBLIC Optional<T> operator~(const T& parser) {
   return Optional<T>{parser};
+}
+
+template <size_t min, size_t max, typename T>
+class TINY_PARSE_PUBLIC Repeat : public Parser {
+ public:
+  explicit Repeat(const T& parser) : parser_{parser} {}
+
+  constexpr size_t min_length() const override {
+    return min * parser_.min_length();
+  }
+
+ protected:
+  constexpr std::string_view parse_it(
+      const std::string_view& sv) const override {
+    auto result = sv;
+
+    for (size_t i = 0; i < min; ++i) {
+      result = result >> parser_;
+      if (result.empty()) return result;
+    }
+
+    for (size_t i = min; i < max; ++i) {
+      const auto tmp = result >> parser_;
+      if (tmp.empty()) return tmp;
+      result = tmp;
+    }
+
+    return result;
+  }
+
+ private:
+  T parser_;
+};
+
+template <size_t min, size_t max, typename T>
+constexpr TINY_PARSE_PUBLIC Repeat<min, max, T> repeat(const T& parser) {
+  return Repeat<min, max, T>{parser};
+}
+
+template <size_t min, size_t max, class T>
+constexpr TINY_PARSE_PUBLIC Repeat<min, max, T> operator*(const T& parser) {
+  return Repeat<min, max, T>{parser};
 }
 
 }  // namespace tiny_parse
