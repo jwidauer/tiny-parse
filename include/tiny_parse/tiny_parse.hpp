@@ -24,7 +24,7 @@ using TINY_PARSE_PUBLIC Consumer = std::function<void(const std::string_view&)>;
 
 class TINY_PARSE_PUBLIC Parser {
  public:
-  Parser() : consumer_{} {};
+  Parser() = default;
   explicit Parser(const Consumer& consumer) : consumer_{consumer} {}
   virtual ~Parser() = default;
 
@@ -43,9 +43,9 @@ class TINY_PARSE_PUBLIC Parser {
    */
   inline std::string_view parse(const std::string_view& sv) const {
     const auto result = parse_it(sv);
-    const auto nr_parsed = sv.size() - result.size();
 
-    if (consumer_ && min_length() <= nr_parsed && nr_parsed != 0)
+    if (const auto nr_parsed = sv.size() - result.size();
+        consumer_ && min_length() <= nr_parsed && nr_parsed != 0)
       consumer_(sv.substr(0, nr_parsed));
 
     return result;

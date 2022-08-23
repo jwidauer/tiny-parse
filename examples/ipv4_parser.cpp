@@ -22,7 +22,7 @@ class Validator {
     ip_.push_back(byte);
   }
 
-  void validate_four_bytes(const std::string_view&) {
+  void validate_four_bytes(const std::string_view&) const {
     if (ip_.size() != 4)
       throw std::runtime_error("IP address must have 4 bytes!!");
   }
