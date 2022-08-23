@@ -43,8 +43,8 @@ jobs:
           python-version: '3.x'
       - name: Install meson and ninja
         run: pip install meson ninja
-      - name: Install lcov
-        run: sudo apt install --yes lcov
+      - name: Install gcovr
+        run: sudo apt install --yes gcovr
       - name: Run build-wrapper
         run: |
           meson build --buildtype release -Db_coverage=true
