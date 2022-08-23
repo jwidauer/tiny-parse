@@ -41,8 +41,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-      - name: Install meson, ninja and gcovr
-        run: pip install meson ninja gcovr==5.0
+      - name: Install meson and ninja
+        run: pip install meson ninja
+      - name: Install lcov
+        run: sudo apt install --yes lcov
       - name: Run build-wrapper
         run: |
           meson build --buildtype release -Db_coverage=true
