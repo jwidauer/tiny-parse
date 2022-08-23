@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       SONAR_SCANNER_VERSION: 4.7.0.2747
       SONAR_SERVER_URL: "https://sonarcloud.io"
@@ -41,10 +41,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-      - name: Install meson and ninja
-        run: pip install meson ninja
-      - name: Install gcovr
-        run: sudo apt install --yes gcovr
+      - name: Install meson, ninja and gcovr
+        run: pip install meson ninja gcovr
       - name: Run build-wrapper
         run: |
           meson build --buildtype release -Db_coverage=true
@@ -62,4 +60,4 @@ jobs:
           sonar-scanner \
             --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" \
             --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
-            --define sonar.coverageReportPaths=build/meson-logs/coverage.xml
+            --define sonar.coverageReportPaths=build/meson-logs/sonarqube.xml
