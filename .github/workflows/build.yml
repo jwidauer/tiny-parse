@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: '3.x'
       - name: Install meson, ninja and gcovr
-        run: pip install meson ninja gcovr
+        run: pip install meson ninja gcovr==5.0
       - name: Run build-wrapper
         run: |
           meson build --buildtype release -Db_coverage=true
