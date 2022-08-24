@@ -22,11 +22,6 @@ class Validator {
     ip_.push_back(byte);
   }
 
-  void validate_four_bytes(const std::string_view&) const {
-    if (ip_.size() != 4)
-      throw std::runtime_error("IP address must have 4 bytes!!");
-  }
-
  private:
   std::vector<uint8_t> ip_;
   std::optional<uint8_t> ip_prefix_;
@@ -45,9 +40,6 @@ int main() {
 
   auto dot = built_in::CharP<'.'>{};
   auto ip_parser = byte & dot & byte & dot & byte & dot & byte;
-
-  ip_parser.consumer(std::bind(&Validator::validate_four_bytes, &validator,
-                               std::placeholders::_1));
 
   std::string_view ip{"192.168.1.1"};
   const auto result = ip >> ip_parser;

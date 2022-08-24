@@ -25,8 +25,10 @@ using TINY_PARSE_PUBLIC Consumer = std::function<void(const std::string_view&)>;
 class TINY_PARSE_PUBLIC Parser {
  public:
   Parser() = default;
-  explicit Parser(const Consumer& consumer) : consumer_{consumer} {}
   virtual ~Parser() = default;
+  explicit Parser(const Consumer& consumer) : consumer_{consumer} {}
+
+  using Result = std::string_view;
 
   /**
    * @brief Set the consumer of the parsed string.
@@ -39,9 +41,9 @@ class TINY_PARSE_PUBLIC Parser {
    * @brief Parse the given string and apply the consumer on a full parse
    *
    * @param sv The string to parse
-   * @return std::string_view The unparsed rest of the input
+   * @return Parser::Result The unparsed rest of the input
    */
-  inline std::string_view parse(const std::string_view& sv) const {
+  inline Result parse(const std::string_view& sv) const {
     const auto result = parse_it(sv);
 
     if (const auto nr_parsed = sv.size() - result.size();
@@ -58,14 +60,15 @@ class TINY_PARSE_PUBLIC Parser {
   virtual size_t min_length() const = 0;
 
  protected:
-  virtual std::string_view parse_it(const std::string_view& sv) const = 0;
+  virtual Result parse_it(const std::string_view& sv) const = 0;
 
  private:
   Consumer consumer_;
 };
 
-inline TINY_PARSE_PUBLIC std::string_view operator>>(const std::string_view& sv,
-                                                     const Parser& parser) {
+inline TINY_PARSE_PUBLIC auto operator>>(const std::string_view& sv,
+                                         const Parser& parser)
+    -> decltype(parser.parse(sv)) {
   return parser.parse(sv);
 }
 
@@ -79,11 +82,10 @@ class TINY_PARSE_PUBLIC Or : public Parser {
   }
 
  protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
     const auto len = sv.size();
-    auto tmp = parser1_.parse(sv);
-    if (tmp.size() == len) tmp = parser2_.parse(sv);
+    auto tmp = sv >> parser1_;
+    if (tmp.size() == len) tmp = sv >> parser2_;
 
     return tmp;
   }
@@ -108,13 +110,12 @@ class TINY_PARSE_PUBLIC Then : public Parser {
   }
 
  protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
-    auto tmp = parser1_.parse(sv);
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
+    auto tmp = sv >> parser1_;
     const auto len = tmp.size();
 
-    if (len == sv.size()) return tmp;
-    tmp = parser2_.parse(tmp);
+    if (len == sv.size()) return sv;
+    tmp = tmp >> parser2_;
 
     if (tmp.size() == len) return sv;
     return tmp;
@@ -138,19 +139,21 @@ class TINY_PARSE_PUBLIC More : public Parser {
   constexpr size_t min_length() const override { return 0; }
 
  protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
     auto old_len = sv.size();
-    auto result = parser_.parse(sv);
+    auto result = sv >> parser_;
     while (!result.empty() && result.size() < old_len) {
       old_len = result.size();
-      result = parser_.parse(result);
+      result = result >> parser_;
     }
 
     return result;
   }
 
  private:
+  template <class U>
+  friend class GreaterThan;
+
   T parser_;
 };
 
@@ -172,9 +175,8 @@ class TINY_PARSE_PUBLIC Optional : public Parser {
   constexpr size_t min_length() const override { return 0; }
 
  protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
-    return parser_.parse(sv);
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
+    return sv >> parser_;
   }
 
  private:
@@ -186,46 +188,77 @@ constexpr TINY_PARSE_PUBLIC Optional<T> operator~(const T& parser) {
   return Optional<T>{parser};
 }
 
-template <size_t min, size_t max, typename T>
-class TINY_PARSE_PUBLIC Repeat : public Parser {
+template <class T>
+class TINY_PARSE_PUBLIC GreaterThan : public Parser {
  public:
-  explicit Repeat(const T& parser) : parser_{parser} {}
+  GreaterThan(size_t min, const T& parser) : min_{min}, parser_{parser} {}
 
   constexpr size_t min_length() const override {
-    return min * parser_.min_length();
+    return min_ * parser_.parser_.min_length();
   }
 
  protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
-    auto result = sv;
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
+    const auto result = sv >> parser_;
+    if ((result.size() + min_length()) < sv.size()) return result;
 
-    for (size_t i = 0; i < min; ++i) {
+    return sv;
+  }
+
+ private:
+  const size_t min_;
+  More<T> parser_;
+};
+
+template <class T>
+constexpr TINY_PARSE_PUBLIC GreaterThan<T> operator<(size_t minimum,
+                                                     const T& parser) {
+  return GreaterThan<T>{minimum, parser};
+}
+
+template <class T>
+constexpr TINY_PARSE_PUBLIC GreaterThan<T> operator>(const T& parser,
+                                                     size_t minimum) {
+  return GreaterThan<T>{minimum, parser};
+}
+
+template <class T>
+class TINY_PARSE_PUBLIC LessThan : public Parser {
+ public:
+  LessThan(size_t max, const T& parser) : max_{max}, parser_{parser} {}
+  constexpr size_t min_length() const override { return 0; }
+
+ protected:
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
+    auto old_len = sv.size();
+    auto result = sv >> parser_;
+
+    const auto upper_bound = max_ - 2;  // -2, because we already parsed one and
+                                        // we need to stop one before the max
+    for (size_t i = 0;
+         !result.empty() && result.size() < old_len && i < upper_bound; ++i) {
+      old_len = result.size();
       result = result >> parser_;
-      if (result.empty()) return result;
-    }
-
-    for (size_t i = min; i < max; ++i) {
-      const auto tmp = result >> parser_;
-      if (tmp.empty()) return tmp;
-      result = tmp;
     }
 
     return result;
   }
 
  private:
+  const size_t max_;
   T parser_;
 };
 
-template <size_t min, size_t max, typename T>
-constexpr TINY_PARSE_PUBLIC Repeat<min, max, T> repeat(const T& parser) {
-  return Repeat<min, max, T>{parser};
+template <class T>
+constexpr TINY_PARSE_PUBLIC LessThan<T> operator<(const T& parser,
+                                                  size_t maximum) {
+  return LessThan<T>{maximum, parser};
 }
 
-template <size_t min, size_t max, class T>
-constexpr TINY_PARSE_PUBLIC Repeat<min, max, T> operator*(const T& parser) {
-  return Repeat<min, max, T>{parser};
+template <class T>
+constexpr TINY_PARSE_PUBLIC LessThan<T> operator>(size_t maximum,
+                                                  const T& parser) {
+  return LessThan<T>{maximum, parser};
 }
 
 }  // namespace tiny_parse

@@ -64,6 +64,17 @@ TEST_CASE("Or") {
   CHECK(parser.parse("") == "");
 }
 
+TEST_CASE("Optional") {
+  using namespace tiny_parse;
+  using namespace tiny_parse::built_in;
+
+  auto parser = ~CharP<'a'>{};
+  CHECK(parser.min_length() == 0);
+  CHECK(parser.parse("aa") == "a");
+  CHECK(parser.parse("a") == "");
+  CHECK(parser.parse("") == "");
+}
+
 // TEST_CASE("More") {
 //   using namespace tiny_parse;
 //   using namespace tiny_parse::built_in;
@@ -76,18 +87,54 @@ TEST_CASE("Or") {
 //   CHECK(parser.parse("") == "");
 // }
 
-TEST_CASE("Repeat") {
+TEST_CASE("GreaterThan") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
 
-  auto parser = repeat<0, 3>(CharP<'a'>{});
-  CHECK(parser.min_length() == 0);
-  CHECK(parser.parse("aaaa") == "a");
-  CHECK(parser.parse("aaa") == "");
-  CHECK(parser.parse("aa") == "");
-  CHECK(parser.parse("a") == "");
-  CHECK(parser.parse("") == "");
-  CHECK(parser.parse("b") == "b");
+  auto perform_checks = [](const auto& parser) {
+    CHECK(parser.min_length() == 2);
+    CHECK(parser.parse("aaaab") == "b");
+    CHECK(parser.parse("aaaa") == "");
+    CHECK(parser.parse("aaa") == "");
+    CHECK(parser.parse("aa") == "aa");
+    CHECK(parser.parse("a") == "a");
+    CHECK(parser.parse("") == "");
+  };
+
+  SUBCASE("operator<") {
+    auto parser = 2 < CharP<'a'>{};
+    perform_checks(parser);
+  }
+
+  SUBCASE("operator>") {
+    auto parser = CharP<'a'>{} > 2;
+    perform_checks(parser);
+  }
+}
+
+TEST_CASE("LessThan") {
+  using namespace tiny_parse;
+  using namespace tiny_parse::built_in;
+
+  auto perform_checks = [](const auto& parser) {
+    CHECK(parser.min_length() == 0);
+    CHECK(parser.parse("aaaab") == "aab");
+    CHECK(parser.parse("aaaa") == "aa");
+    CHECK(parser.parse("aaa") == "a");
+    CHECK(parser.parse("aa") == "");
+    CHECK(parser.parse("a") == "");
+    CHECK(parser.parse("") == "");
+  };
+
+  SUBCASE("operator<") {
+    auto parser = CharP<'a'>{} < 3;
+    perform_checks(parser);
+  }
+
+  SUBCASE("operator>") {
+    auto parser = 3 > CharP<'a'>{};
+    perform_checks(parser);
+  }
 }
 
 TEST_SUITE_END();

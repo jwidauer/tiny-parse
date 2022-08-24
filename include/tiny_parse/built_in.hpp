@@ -15,8 +15,7 @@ class TINY_PARSE_PUBLIC CharP : public Parser {
   constexpr size_t min_length() const override { return 1; }
 
  protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
     if (!sv.empty() && sv.front() == C) return sv.substr(1);
     return sv;
   }
@@ -34,8 +33,7 @@ class TINY_PARSE_PUBLIC RangeP : public Parser {
   constexpr size_t min_length() const override { return 1; }
 
  protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
     if (!sv.empty() && sv.front() >= lower && sv.front() <= upper)
       return sv.substr(1);
     return sv;
@@ -50,8 +48,7 @@ class TINY_PARSE_PUBLIC AnyP : public Parser {
   constexpr size_t min_length() const override { return 1; }
 
  protected:
-  constexpr std::string_view parse_it(
-      const std::string_view& sv) const override {
+  constexpr Parser::Result parse_it(const std::string_view& sv) const override {
     if (!sv.empty()) return sv.substr(1);
     return sv;
   }
