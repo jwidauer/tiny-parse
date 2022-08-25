@@ -16,8 +16,8 @@ class TINY_PARSE_PUBLIC CharP : public Parser {
 
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
-    if (!sv.empty() && sv.front() == C) return sv.substr(1);
-    return sv;
+    if (!sv.empty() && sv.front() == C) return {sv.substr(1), true};
+    return {sv, false};
   }
 };
 
@@ -35,8 +35,8 @@ class TINY_PARSE_PUBLIC RangeP : public Parser {
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
     if (!sv.empty() && sv.front() >= lower && sv.front() <= upper)
-      return sv.substr(1);
-    return sv;
+      return {sv.substr(1), true};
+    return {sv, false};
   }
 };
 
@@ -49,8 +49,8 @@ class TINY_PARSE_PUBLIC AnyP : public Parser {
 
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
-    if (!sv.empty()) return sv.substr(1);
-    return sv;
+    if (!sv.empty()) return {sv.substr(1), true};
+    return {sv, false};
   }
 };
 

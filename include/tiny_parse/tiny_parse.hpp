@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <string>
 #include <string_view>
 
 namespace tiny_parse {
@@ -28,7 +29,16 @@ class TINY_PARSE_PUBLIC Parser {
   virtual ~Parser() = default;
   explicit Parser(const Consumer& consumer) : consumer_{consumer} {}
 
-  using Result = std::string_view;
+  struct Result {
+    std::string_view value;
+    bool success;
+
+    explicit operator bool() const { return success; }
+    bool operator==(const Result& other) const {
+      return value == other.value && success == other.success;
+    }
+    friend std::ostream& operator<<(std::ostream& os, const Result& result);
+  };
 
   /**
    * @brief Set the consumer of the parsed string.
@@ -46,9 +56,8 @@ class TINY_PARSE_PUBLIC Parser {
   inline Result parse(const std::string_view& sv) const {
     const auto result = parse_it(sv);
 
-    if (const auto nr_parsed = sv.size() - result.size();
-        consumer_ && min_length() <= nr_parsed && nr_parsed != 0)
-      consumer_(sv.substr(0, nr_parsed));
+    if (consumer_ && result.success)
+      consumer_(sv.substr(0, sv.size() - result.value.size()));
 
     return result;
   }
@@ -66,10 +75,20 @@ class TINY_PARSE_PUBLIC Parser {
   Consumer consumer_;
 };
 
-inline TINY_PARSE_PUBLIC auto operator>>(const std::string_view& sv,
-                                         const Parser& parser)
-    -> decltype(parser.parse(sv)) {
+inline TINY_PARSE_PUBLIC Parser::Result operator>>(const std::string_view& sv,
+                                                   const Parser& parser) {
   return parser.parse(sv);
+}
+
+std::ostream& operator<<(std::ostream& os, const Parser::Result& result) {
+  const std::string s = "{\"" + std::string{result.value} + "\", " +
+                        (result.success ? "true" : "false") + "}";
+  return os << s;
+}
+
+inline TINY_PARSE_PUBLIC Parser::Result operator>>(const Parser::Result& result,
+                                                   const Parser& parser) {
+  return parser.parse(result.value);
 }
 
 template <class T, class S>
@@ -83,11 +102,8 @@ class TINY_PARSE_PUBLIC Or : public Parser {
 
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
-    const auto len = sv.size();
-    auto tmp = sv >> parser1_;
-    if (tmp.size() == len) tmp = sv >> parser2_;
-
-    return tmp;
+    if (const auto result = sv >> parser1_; result.success) return result;
+    return sv >> parser2_;
   }
 
  private:
@@ -111,14 +127,13 @@ class TINY_PARSE_PUBLIC Then : public Parser {
 
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
-    auto tmp = sv >> parser1_;
-    const auto len = tmp.size();
+    auto result = sv >> parser1_;
 
-    if (len == sv.size()) return sv;
-    tmp = tmp >> parser2_;
+    if (!result.success) return {sv, false};
+    result = result >> parser2_;
 
-    if (tmp.size() == len) return sv;
-    return tmp;
+    if (!result.success) return {sv, false};
+    return result;
   }
 
  private:
@@ -140,10 +155,8 @@ class TINY_PARSE_PUBLIC More : public Parser {
 
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
-    auto old_len = sv.size();
     auto result = sv >> parser_;
-    while (!result.empty() && result.size() < old_len) {
-      old_len = result.size();
+    while (result.success) {
       result = result >> parser_;
     }
 
@@ -176,7 +189,7 @@ class TINY_PARSE_PUBLIC Optional : public Parser {
 
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
-    return sv >> parser_;
+    return {parser_.parse(sv).value, true};
   }
 
  private:
@@ -194,20 +207,24 @@ class TINY_PARSE_PUBLIC GreaterThan : public Parser {
   GreaterThan(size_t min, const T& parser) : min_{min}, parser_{parser} {}
 
   constexpr size_t min_length() const override {
-    return min_ * parser_.parser_.min_length();
+    return min_ * parser_.min_length();
   }
 
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
-    const auto result = sv >> parser_;
-    if ((result.size() + min_length()) < sv.size()) return result;
-
-    return sv;
+    size_t i = 0;
+    auto result = sv >> parser_;
+    while (result.success) {
+      ++i;
+      result = result >> parser_;
+    }
+    return (min_ < i) ? Parser::Result{result.value, true}
+                      : Parser::Result{sv, false};
   }
 
  private:
   const size_t min_;
-  More<T> parser_;
+  T parser_;
 };
 
 template <class T>
@@ -230,18 +247,17 @@ class TINY_PARSE_PUBLIC LessThan : public Parser {
 
  protected:
   constexpr Parser::Result parse_it(const std::string_view& sv) const override {
-    auto old_len = sv.size();
     auto result = sv >> parser_;
-
-    const auto upper_bound = max_ - 2;  // -2, because we already parsed one and
-                                        // we need to stop one before the max
-    for (size_t i = 0;
-         !result.empty() && result.size() < old_len && i < upper_bound; ++i) {
-      old_len = result.size();
+    auto success = result.success;
+    // Start at 2 because we already ran the parser once and want to stop at
+    // max_ - 1
+    size_t i = 2;
+    for (; result.success && i < max_; ++i) {
       result = result >> parser_;
+      success |= result.success;
     }
 
-    return result;
+    return {result.value, success};
   }
 
  private:

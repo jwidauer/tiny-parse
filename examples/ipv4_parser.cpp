@@ -44,7 +44,7 @@ int main() {
   std::string_view ip{"192.168.1.1"};
   const auto result = ip >> ip_parser;
 
-  if (!result.empty())
+  if (!result)
     std::cout << "Invalid IP address!!" << std::endl;
   else
     std::cout << "Valid IP address!" << std::endl;
