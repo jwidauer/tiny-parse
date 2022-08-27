@@ -28,6 +28,7 @@ TEST_CASE("RangeP") {
   CHECK(parser.parse("0") == Result{"", true});
   CHECK(parser.parse("9") == Result{"", true});
   CHECK(parser.parse("a") == Result{"a", false});
+  CHECK(parser.parse(".") == Result{".", false});
   CHECK(parser.parse("") == Result{"", false});
 }
 
@@ -46,15 +47,44 @@ TEST_CASE("Consumer") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
 
-  bool called = false;
-  const auto consumer = [&called](const std::string_view& sv) {
-    CHECK(sv == "a");
-    called = true;
-  };
-  auto parser = CharP<'a'>{}.consumer(consumer);
-  parser.parse("a");
+  SUBCASE("Validity") {
+    bool called = false;
+    const auto consumer = [&called](const std::string_view& sv) {
+      CHECK(sv == "a");
+      called = true;
+    };
+    auto parser = CharP<'a'>{}.consumer(consumer);
 
-  CHECK(called);
+    SUBCASE("Valid case") {
+      parser.parse("a");
+      CHECK(called);
+    }
+
+    SUBCASE("Invalid case") {
+      parser.parse("b");
+      CHECK(!called);
+    }
+  }
+
+  SUBCASE("Consumer throws") {
+    bool called = false;
+    const auto consumer = [&called](const std::string_view& sv) {
+      CHECK(sv == "a");
+      called = true;
+      throw std::runtime_error{"error"};
+    };
+    auto parser = CharP<'a'>{}.consumer(consumer);
+
+    SUBCASE("Valid case") {
+      CHECK_THROWS_AS(parser.parse("a"), std::runtime_error);
+      CHECK(called);
+    }
+
+    SUBCASE("Invalid case") {
+      parser.parse("b");
+      CHECK(!called);
+    }
+  }
 }
 
 TEST_CASE("Or") {

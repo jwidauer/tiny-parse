@@ -12,10 +12,10 @@ namespace tiny_parse::built_in {
 template <char C>
 class TINY_PARSE_PUBLIC CharP : public Parser<CharP<C>> {
  public:
-  constexpr size_t min_length() const override { return 1; }
+  constexpr size_t min_length() const noexcept override { return 1; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
     if (!sv.empty() && sv.front() == C) return {sv.substr(1), true};
     return {sv, false};
   }
@@ -30,10 +30,10 @@ class TINY_PARSE_PUBLIC CharP : public Parser<CharP<C>> {
 template <char lower, char upper>
 class TINY_PARSE_PUBLIC RangeP : public Parser<RangeP<lower, upper>> {
  public:
-  constexpr size_t min_length() const override { return 1; }
+  constexpr size_t min_length() const noexcept override { return 1; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
     if (!sv.empty() && sv.front() >= lower && sv.front() <= upper)
       return {sv.substr(1), true};
     return {sv, false};
@@ -45,10 +45,10 @@ class TINY_PARSE_PUBLIC RangeP : public Parser<RangeP<lower, upper>> {
  */
 class TINY_PARSE_PUBLIC AnyP : public Parser<AnyP> {
  public:
-  constexpr size_t min_length() const override { return 1; }
+  constexpr size_t min_length() const noexcept override { return 1; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
     if (!sv.empty()) return {sv.substr(1), true};
     return {sv, false};
   }

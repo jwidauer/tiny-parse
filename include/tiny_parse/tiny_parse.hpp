@@ -43,12 +43,19 @@ struct Result {
    * @return true if the parse was successful.
    * @return false if the parse was not successful.
    */
-  explicit operator bool() const { return success; }
-  bool operator==(const Result& other) const {
+  explicit operator bool() const noexcept { return success; }
+  bool operator==(const Result& other) const noexcept {
     return value == other.value && success == other.success;
   }
   friend std::ostream& operator<<(std::ostream& os, const Result& result);
 };
+
+/** @brief The string conversion for a Result. */
+std::ostream& operator<<(std::ostream& os, const Result& result) {
+  const std::string s = "{\"" + std::string{result.value} + "\", " +
+                        (result.success ? "true" : "false") + "}";
+  return os << std::move(s);
+}
 
 /**
  * @brief The base parser class.
@@ -64,7 +71,7 @@ class TINY_PARSE_PUBLIC Parser {
    *
    * @param consumer The consumer to invoce on a successful parse.
    */
-  Derived& consumer(const Consumer& consumer) {
+  Derived& consumer(const Consumer& consumer) noexcept {
     consumer_ = consumer;
     return *static_cast<Derived*>(this);
   }
@@ -88,21 +95,14 @@ class TINY_PARSE_PUBLIC Parser {
    * @brief The minimum number of parsed characters that constitute a full
    * parse
    */
-  virtual size_t min_length() const = 0;
+  virtual size_t min_length() const noexcept = 0;
 
  protected:
-  virtual Result parse_it(const std::string_view& sv) const = 0;
+  virtual Result parse_it(const std::string_view& sv) const noexcept = 0;
 
  private:
   Consumer consumer_;
 };
-
-/** @brief The string conversion for a Result. */
-std::ostream& operator<<(std::ostream& os, const Result& result) {
-  const std::string s = "{\"" + std::string{result.value} + "\", " +
-                        (result.success ? "true" : "false") + "}";
-  return os << s;
-}
 
 /** @brief Syntactic sugar for calling the parse function. */
 template <class Derived>
@@ -130,14 +130,15 @@ inline TINY_PARSE_PUBLIC Result operator>>(const Result& result,
 template <class T, class S>
 class TINY_PARSE_PUBLIC Or : public Parser<Or<T, S>> {
  public:
-  Or(const T& p1, const S& p2) : parser1_{p1}, parser2_{p2} {}
+  Or(const T& p1, const S& p2) noexcept : parser1_{p1}, parser2_{p2} {}
 
-  constexpr size_t min_length() const override {
+  constexpr size_t min_length() const noexcept override {
     return std::min(parser1_.min_length(), parser2_.min_length());
   }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(
+      const std::string_view& sv) const noexcept override {
     if (const auto result = sv >> parser1_; result.success) return result;
     return sv >> parser2_;
   }
@@ -149,7 +150,8 @@ class TINY_PARSE_PUBLIC Or : public Parser<Or<T, S>> {
 
 /** @brief Syntactic sugar for creating an Or parser. */
 template <class T, class S>
-constexpr TINY_PARSE_PUBLIC Or<T, S> operator|(const T& p1, const S& p2) {
+constexpr TINY_PARSE_PUBLIC Or<T, S> operator|(const T& p1,
+                                               const S& p2) noexcept {
   return Or<T, S>{p1, p2};
 }
 
@@ -164,14 +166,15 @@ constexpr TINY_PARSE_PUBLIC Or<T, S> operator|(const T& p1, const S& p2) {
 template <class T, class S>
 class TINY_PARSE_PUBLIC Then : public Parser<Then<T, S>> {
  public:
-  Then(const T& p1, const S& p2) : parser1_{p1}, parser2_{p2} {}
+  Then(const T& p1, const S& p2) noexcept : parser1_{p1}, parser2_{p2} {}
 
-  constexpr size_t min_length() const override {
+  constexpr size_t min_length() const noexcept override {
     return parser1_.min_length() + parser2_.min_length();
   }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(
+      const std::string_view& sv) const noexcept override {
     auto result = sv >> parser1_;
 
     if (!result.success) return {sv, false};
@@ -188,7 +191,8 @@ class TINY_PARSE_PUBLIC Then : public Parser<Then<T, S>> {
 
 /** @brief Syntactic sugar for creating a Then parser. */
 template <class T, class S>
-constexpr TINY_PARSE_PUBLIC Then<T, S> operator&(const T& p1, const S& p2) {
+constexpr TINY_PARSE_PUBLIC Then<T, S> operator&(const T& p1,
+                                                 const S& p2) noexcept {
   return Then<T, S>{p1, p2};
 }
 
@@ -200,12 +204,13 @@ constexpr TINY_PARSE_PUBLIC Then<T, S> operator&(const T& p1, const S& p2) {
 template <class T>
 class TINY_PARSE_PUBLIC Optional : public Parser<Optional<T>> {
  public:
-  explicit Optional(const T& parser) : parser_{parser} {}
+  explicit Optional(const T& parser) noexcept : parser_{parser} {}
 
-  constexpr size_t min_length() const override { return 0; }
+  constexpr size_t min_length() const noexcept override { return 0; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(
+      const std::string_view& sv) const noexcept override {
     return {parser_.parse(sv).value, true};
   }
 
@@ -214,7 +219,7 @@ class TINY_PARSE_PUBLIC Optional : public Parser<Optional<T>> {
 };
 
 template <class T>
-constexpr TINY_PARSE_PUBLIC Optional<T> operator~(const T& parser) {
+constexpr TINY_PARSE_PUBLIC Optional<T> operator~(const T& parser) noexcept {
   return Optional<T>{parser};
 }
 
@@ -226,12 +231,13 @@ constexpr TINY_PARSE_PUBLIC Optional<T> operator~(const T& parser) {
 template <class T>
 class TINY_PARSE_PUBLIC Many : public Parser<Many<T>> {
  public:
-  explicit Many(const T& parser) : parser_{parser} {}
+  explicit Many(const T& parser) noexcept : parser_{parser} {}
 
-  constexpr size_t min_length() const override { return 0; }
+  constexpr size_t min_length() const noexcept override { return 0; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(
+      const std::string_view& sv) const noexcept override {
     auto result = sv >> parser_;
     while (result.success) {
       result = result >> parser_;
@@ -246,7 +252,7 @@ class TINY_PARSE_PUBLIC Many : public Parser<Many<T>> {
 /** @brief Syntactic sugar for creating parser that matches zero or more
  * characters */
 template <class T>
-constexpr TINY_PARSE_PUBLIC Many<T> operator*(const T& parser) {
+constexpr TINY_PARSE_PUBLIC Many<T> operator*(const T& parser) noexcept {
   return Many<T>{parser};
 }
 
@@ -258,14 +264,16 @@ constexpr TINY_PARSE_PUBLIC Many<T> operator*(const T& parser) {
 template <class T>
 class TINY_PARSE_PUBLIC Times : public Parser<Times<T>> {
  public:
-  Times(size_t times, const T& parser) : times_{times}, parser_{parser} {}
+  Times(size_t times, const T& parser) noexcept
+      : times_{times}, parser_{parser} {}
 
-  constexpr size_t min_length() const override {
+  constexpr size_t min_length() const noexcept override {
     return parser_.min_length() * times_;
   }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(
+      const std::string_view& sv) const noexcept override {
     size_t i = 1;
     auto result = sv >> parser_;
     for (; result.success && i < times_; ++i) {
@@ -283,14 +291,16 @@ class TINY_PARSE_PUBLIC Times : public Parser<Times<T>> {
 /** @brief Syntactic sugar for creating parser that matches an exact number of
  * times */
 template <class T>
-constexpr TINY_PARSE_PUBLIC Times<T> operator*(size_t times, const T& parser) {
+constexpr TINY_PARSE_PUBLIC Times<T> operator*(size_t times,
+                                               const T& parser) noexcept {
   return Times<T>{times, parser};
 }
 
 /** @brief Syntactic sugar for creating a parser that matches an exact number of
  * times */
 template <class T>
-constexpr TINY_PARSE_PUBLIC Times<T> operator*(const T& parser, size_t times) {
+constexpr TINY_PARSE_PUBLIC Times<T> operator*(const T& parser,
+                                               size_t times) noexcept {
   return Times<T>{times, parser};
 }
 
@@ -303,14 +313,16 @@ constexpr TINY_PARSE_PUBLIC Times<T> operator*(const T& parser, size_t times) {
 template <class T>
 class TINY_PARSE_PUBLIC GreaterThan : public Parser<GreaterThan<T>> {
  public:
-  GreaterThan(size_t min, const T& parser) : min_{min}, parser_{parser} {}
+  GreaterThan(size_t min, const T& parser) noexcept
+      : min_{min}, parser_{parser} {}
 
-  constexpr size_t min_length() const override {
+  constexpr size_t min_length() const noexcept override {
     return (min_ + 1) * parser_.min_length();
   }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(
+      const std::string_view& sv) const noexcept override {
     size_t i = 0;
     auto result = sv >> parser_;
     while (result.success) {
@@ -328,21 +340,21 @@ class TINY_PARSE_PUBLIC GreaterThan : public Parser<GreaterThan<T>> {
 /** @brief Syntactic sugar for creating a GreaterThan parser. */
 template <class T>
 constexpr TINY_PARSE_PUBLIC GreaterThan<T> operator<(size_t minimum,
-                                                     const T& parser) {
+                                                     const T& parser) noexcept {
   return GreaterThan<T>{minimum, parser};
 }
 
 /** @brief Syntactic sugar for creating a GreaterThan parser. */
 template <class T>
 constexpr TINY_PARSE_PUBLIC GreaterThan<T> operator>(const T& parser,
-                                                     size_t minimum) {
+                                                     size_t minimum) noexcept {
   return GreaterThan<T>{minimum, parser};
 }
 
 /** @brief Syntactic sugar for creating parser that matches one or more
  * characters */
 template <class T>
-constexpr TINY_PARSE_PUBLIC GreaterThan<T> operator+(const T& parser) {
+constexpr TINY_PARSE_PUBLIC GreaterThan<T> operator+(const T& parser) noexcept {
   return GreaterThan<T>{0, parser};
 }
 
@@ -355,11 +367,12 @@ constexpr TINY_PARSE_PUBLIC GreaterThan<T> operator+(const T& parser) {
 template <class T>
 class TINY_PARSE_PUBLIC LessThan : public Parser<LessThan<T>> {
  public:
-  LessThan(size_t max, const T& parser) : max_{max}, parser_{parser} {}
-  constexpr size_t min_length() const override { return 0; }
+  LessThan(size_t max, const T& parser) noexcept : max_{max}, parser_{parser} {}
+  constexpr size_t min_length() const noexcept override { return 0; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const override {
+  constexpr Result parse_it(
+      const std::string_view& sv) const noexcept override {
     auto result = sv >> parser_;
     auto success = result.success;
     // Start at 2 because we already ran the parser once and want to stop at
@@ -380,14 +393,14 @@ class TINY_PARSE_PUBLIC LessThan : public Parser<LessThan<T>> {
 /** @brief Syntactic sugar for creating a LessThan parser. */
 template <class T>
 constexpr TINY_PARSE_PUBLIC LessThan<T> operator<(const T& parser,
-                                                  size_t maximum) {
+                                                  size_t maximum) noexcept {
   return LessThan<T>{maximum, parser};
 }
 
 /** @brief Syntactic sugar for creating a LessThan parser. */
 template <class T>
 constexpr TINY_PARSE_PUBLIC LessThan<T> operator>(size_t maximum,
-                                                  const T& parser) {
+                                                  const T& parser) noexcept {
   return LessThan<T>{maximum, parser};
 }
 
