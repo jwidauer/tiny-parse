@@ -34,7 +34,7 @@ int main() {
   Validator validator;
 
   // Define what constitutes a digit
-  auto byte = ++built_in::digit;
+  auto byte = built_in::whole_number;
   byte.consumer(
       std::bind(&Validator::validate_byte, &validator, std::placeholders::_1));
 

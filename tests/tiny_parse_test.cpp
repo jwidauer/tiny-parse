@@ -11,9 +11,8 @@ TEST_SUITE_BEGIN("tiny_parse");
 TEST_CASE("CharP") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
-  using Result = Parser::Result;
 
-  auto parser = CharP<'a'>{};
+  const auto parser = CharP<'a'>{};
   CHECK(parser.min_length() == 1);
   CHECK(parser.parse("a") == Result{"", true});
   CHECK(parser.parse("b") == Result{"b", false});
@@ -23,9 +22,8 @@ TEST_CASE("CharP") {
 TEST_CASE("RangeP") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
-  using Result = Parser::Result;
 
-  auto parser = RangeP<'0', '9'>{};
+  const auto parser = RangeP<'0', '9'>{};
   CHECK(parser.min_length() == 1);
   CHECK(parser.parse("0") == Result{"", true});
   CHECK(parser.parse("9") == Result{"", true});
@@ -36,34 +34,34 @@ TEST_CASE("RangeP") {
 TEST_CASE("AnyP") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
-  using Result = Parser::Result;
 
-  auto parser = AnyP{};
+  const auto parser = AnyP{};
   CHECK(parser.min_length() == 1);
   CHECK(parser.parse("a") == Result{"", true});
   CHECK(parser.parse("9") == Result{"", true});
   CHECK(parser.parse("") == Result{"", false});
 }
 
-TEST_CASE("Then") {
+TEST_CASE("Consumer") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
-  using Result = Parser::Result;
 
-  auto parser = CharP<'a'>{} & CharP<'b'>{};
-  CHECK(parser.min_length() == 2);
-  CHECK(parser.parse("ab") == Result{"", true});
-  CHECK(parser.parse("a") == Result{"a", false});
-  CHECK(parser.parse("b") == Result{"b", false});
-  CHECK(parser.parse("") == Result{"", false});
+  bool called = false;
+  const auto consumer = [&called](const std::string_view& sv) {
+    CHECK(sv == "a");
+    called = true;
+  };
+  auto parser = CharP<'a'>{}.consumer(consumer);
+  parser.parse("a");
+
+  CHECK(called);
 }
 
 TEST_CASE("Or") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
-  using Result = Parser::Result;
 
-  auto parser = CharP<'a'>{} | CharP<'b'>{};
+  const auto parser = CharP<'a'>{} | CharP<'b'>{};
   CHECK(parser.min_length() == 1);
   CHECK(parser.parse("a") == Result{"", true});
   CHECK(parser.parse("b") == Result{"", true});
@@ -71,37 +69,69 @@ TEST_CASE("Or") {
   CHECK(parser.parse("") == Result{"", false});
 }
 
+TEST_CASE("Then") {
+  using namespace tiny_parse;
+  using namespace tiny_parse::built_in;
+
+  const auto parser = CharP<'a'>{} & CharP<'b'>{};
+  CHECK(parser.min_length() == 2);
+  CHECK(parser.parse("ab") == Result{"", true});
+  CHECK(parser.parse("a") == Result{"a", false});
+  CHECK(parser.parse("b") == Result{"b", false});
+  CHECK(parser.parse("") == Result{"", false});
+}
+
 TEST_CASE("Optional") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
-  using Result = Parser::Result;
 
-  auto parser = ~CharP<'a'>{};
+  const auto parser = ~CharP<'a'>{};
   CHECK(parser.min_length() == 0);
   CHECK(parser.parse("aa") == Result{"a", true});
   CHECK(parser.parse("a") == Result{"", true});
   CHECK(parser.parse("") == Result{"", true});
 }
 
-// TEST_CASE("More") {
-//   using namespace tiny_parse;
-//   using namespace tiny_parse::built_in;
+TEST_CASE("Many") {
+  using namespace tiny_parse;
+  using namespace tiny_parse::built_in;
 
-//   auto parser = CharP<'a'>{} * 3;
-//   CHECK(parser.min_length() == 3);
-//   CHECK(parser.parse("aaa") == "");
-//   CHECK(parser.parse("aa") == "aa");
-//   CHECK(parser.parse("a") == "a");
-//   CHECK(parser.parse("") == "");
-// }
+  SUBCASE("operator*") {
+    const auto parser = *CharP<'a'>{};
+    CHECK(parser.min_length() == 0);
+    CHECK(parser.parse("aaaab") == Result{"b", true});
+    CHECK(parser.parse("aaaa") == Result{"", true});
+    CHECK(parser.parse("aaa") == Result{"", true});
+    CHECK(parser.parse("aa") == Result{"", true});
+    CHECK(parser.parse("a") == Result{"", true});
+    CHECK(parser.parse("") == Result{"", true});
+  }
+}
+
+TEST_CASE("Times") {
+  using namespace tiny_parse;
+  using namespace tiny_parse::built_in;
+
+  auto perform_checks = [](auto parser) {
+    CHECK(parser.min_length() == 3);
+    CHECK(parser.parse("aaba") == Result{"aaba", false});
+    CHECK(parser.parse("aaaa") == Result{"a", true});
+    CHECK(parser.parse("aaa") == Result{"", true});
+    CHECK(parser.parse("aa") == Result{"aa", false});
+    CHECK(parser.parse("a") == Result{"a", false});
+    CHECK(parser.parse("") == Result{"", false});
+  };
+
+  SUBCASE("<parser> * 3") { perform_checks(CharP<'a'>{} * 3); }
+  SUBCASE("3 * <parser>") { perform_checks(3 * CharP<'a'>{}); }
+}
 
 TEST_CASE("GreaterThan") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
-  using Result = Parser::Result;
 
   auto perform_checks = [](const auto& parser) {
-    CHECK(parser.min_length() == 2);
+    CHECK(parser.min_length() == 3);
     CHECK(parser.parse("aaaab") == Result{"b", true});
     CHECK(parser.parse("aaaa") == Result{"", true});
     CHECK(parser.parse("aaa") == Result{"", true});
@@ -111,20 +141,30 @@ TEST_CASE("GreaterThan") {
   };
 
   SUBCASE("operator<") {
-    auto parser = 2 < CharP<'a'>{};
+    const auto parser = 2 < CharP<'a'>{};
     perform_checks(parser);
   }
 
   SUBCASE("operator>") {
-    auto parser = CharP<'a'>{} > 2;
+    const auto parser = CharP<'a'>{} > 2;
     perform_checks(parser);
+  }
+
+  SUBCASE("operator+") {
+    const auto parser = +CharP<'a'>{};
+    CHECK(parser.min_length() == 1);
+    CHECK(parser.parse("aaaab") == Result{"b", true});
+    CHECK(parser.parse("aaaa") == Result{"", true});
+    CHECK(parser.parse("aaa") == Result{"", true});
+    CHECK(parser.parse("aa") == Result{"", true});
+    CHECK(parser.parse("a") == Result{"", true});
+    CHECK(parser.parse("") == Result{"", false});
   }
 }
 
 TEST_CASE("LessThan") {
   using namespace tiny_parse;
   using namespace tiny_parse::built_in;
-  using Result = Parser::Result;
 
   auto perform_checks = [](const auto& parser) {
     CHECK(parser.min_length() == 0);
@@ -137,13 +177,48 @@ TEST_CASE("LessThan") {
   };
 
   SUBCASE("operator<") {
-    auto parser = CharP<'a'>{} < 3;
+    const auto parser = CharP<'a'>{} < 3;
     perform_checks(parser);
   }
 
   SUBCASE("operator>") {
-    auto parser = 3 > CharP<'a'>{};
+    const auto parser = 3 > CharP<'a'>{};
     perform_checks(parser);
+  }
+}
+
+TEST_CASE("Result") {
+  using namespace tiny_parse;
+  using namespace tiny_parse::built_in;
+
+  SUBCASE("operator bool") {
+    SUBCASE("true") { CHECK(Result{"abc", true}); }
+
+    SUBCASE("false") { CHECK_FALSE(Result{"abc", false}); }
+  }
+
+  SUBCASE("operator<<") {
+    std::stringstream ss;
+
+    SUBCASE("true") {
+      ss << Result{"abc", true};
+      CHECK(ss.str() == "{\"abc\", true}");
+    }
+    SUBCASE("false") {
+      ss << Result{"abc", false};
+      CHECK(ss.str() == "{\"abc\", false}");
+    }
+  }
+
+  SUBCASE("operator==") {
+    const Result result{"abc", true};
+    SUBCASE("true") { CHECK(result == result); }
+
+    SUBCASE("false") {
+      CHECK_FALSE(result == Result{"abc", false});
+      CHECK_FALSE(result == Result{"abcd", true});
+      CHECK_FALSE(result == Result{"abcd", false});
+    }
   }
 }
 
