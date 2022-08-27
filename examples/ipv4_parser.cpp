@@ -49,5 +49,7 @@ int main() {
   else
     std::cout << "Valid IP address!" << std::endl;
 
+  std::cout << "Result is: " << result.value << std::endl;
+
   return 0;
 }

@@ -54,7 +54,7 @@ struct Result {
 std::ostream& operator<<(std::ostream& os, const Result& result) {
   const std::string s = "{\"" + std::string{result.value} + "\", " +
                         (result.success ? "true" : "false") + "}";
-  return os << std::move(s);
+  return os << s;
 }
 
 /**
