@@ -45,7 +45,7 @@ jobs:
         run: pip install meson ninja gcovr
       - name: Run build-wrapper
         run: |
-          meson build --buildtype release -Db_coverage=true
+          meson build -Db_coverage=true
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} meson compile -C build
       - name: Run tests and generate coverage report
         run: |
