@@ -52,9 +52,10 @@ struct Result {
 
 /** @brief The string conversion for a Result. */
 std::ostream& operator<<(std::ostream& os, const Result& result) {
-  const std::string s = "{\"" + std::string{result.value} + "\", " +
-                        (result.success ? "true" : "false") + "}";
-  return os << s;
+  using namespace std::literals;
+
+  return os << "{\""sv << result.value << "\", "sv
+            << (result.success ? "true"sv : "false"sv) << "}"sv;
 }
 
 /**
