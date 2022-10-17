@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iomanip>
 #include <string>
 #include <string_view>
 
@@ -51,26 +52,50 @@ struct Result {
 };
 
 /** @brief The string conversion for a Result. */
-std::ostream& operator<<(std::ostream& os, const Result& result) {
+inline std::ostream& operator<<(std::ostream& os, const Result& result) {
   using namespace std::literals;
 
-  return os << "{\""sv << result.value << "\", "sv
+  return os << "{"sv << std::quoted(result.value) << ", "sv
             << (result.success ? "true"sv : "false"sv) << "}"sv;
 }
+
+/**
+ * @brief Abstract base class for parsers.
+ *
+ * This is mainly used to allow for runtime polymorphism, without the need to
+ * specify all template parameters.
+ */
+class TINY_PARSE_PUBLIC Parser {
+ public:
+  virtual ~Parser() = default;
+
+  virtual Result parse(const std::string_view& sv) const = 0;
+};
 
 /**
  * @brief The base parser class.
  */
 template <class Derived>
-class TINY_PARSE_PUBLIC Parser {
+class TINY_PARSE_PUBLIC BaseParser : public Parser {
  public:
-  Parser() = default;
-  virtual ~Parser() = default;
+  BaseParser() = default;
+  ~BaseParser() override = default;
+
+  /**
+   * @brief Create a copy of this parser.
+   *
+   * Useful for creating parsers from the built-in parsers.
+   *
+   * @return Derived A copy of this parser.
+   */
+  Derived copy() const noexcept {
+    return Derived{*static_cast<const Derived*>(this)};
+  }
 
   /**
    * @brief Set the consumer of the parsed string.
    *
-   * @param consumer The consumer to invoce on a successful parse.
+   * @param consumer The consumer to invoke on a successful parse.
    */
   Derived& consumer(const Consumer& consumer) noexcept {
     consumer_ = consumer;
@@ -83,7 +108,7 @@ class TINY_PARSE_PUBLIC Parser {
    * @param sv The string to parse
    * @return Result The result of the parse.
    */
-  inline Result parse(const std::string_view& sv) const {
+  inline Result parse(const std::string_view& sv) const final {
     const auto result = parse_it(sv);
 
     if (consumer_ && result.success)
@@ -108,14 +133,14 @@ class TINY_PARSE_PUBLIC Parser {
 /** @brief Syntactic sugar for calling the parse function. */
 template <class Derived>
 inline TINY_PARSE_PUBLIC Result operator>>(const std::string_view& sv,
-                                           const Parser<Derived>& parser) {
+                                           const BaseParser<Derived>& parser) {
   return parser.parse(sv);
 }
 
 /** @brief Syntactic sugar for calling the parse function. */
 template <class Derived>
 inline TINY_PARSE_PUBLIC Result operator>>(const Result& result,
-                                           const Parser<Derived>& parser) {
+                                           const BaseParser<Derived>& parser) {
   return parser.parse(result.value);
 }
 
@@ -129,7 +154,7 @@ inline TINY_PARSE_PUBLIC Result operator>>(const Result& result,
  * @tparam S The second parser that will be tried.
  */
 template <class T, class S>
-class TINY_PARSE_PUBLIC Or : public Parser<Or<T, S>> {
+class TINY_PARSE_PUBLIC Or : public BaseParser<Or<T, S>> {
  public:
   Or(const T& p1, const S& p2) noexcept : parser1_{p1}, parser2_{p2} {}
 
@@ -165,7 +190,7 @@ constexpr TINY_PARSE_PUBLIC Or<T, S> operator|(const T& p1,
  * @tparam S The second parser that will be tried.
  */
 template <class T, class S>
-class TINY_PARSE_PUBLIC Then : public Parser<Then<T, S>> {
+class TINY_PARSE_PUBLIC Then : public BaseParser<Then<T, S>> {
  public:
   Then(const T& p1, const S& p2) noexcept : parser1_{p1}, parser2_{p2} {}
 
@@ -203,7 +228,7 @@ constexpr TINY_PARSE_PUBLIC Then<T, S> operator&(const T& p1,
  * @tparam T The parser to match.
  */
 template <class T>
-class TINY_PARSE_PUBLIC Optional : public Parser<Optional<T>> {
+class TINY_PARSE_PUBLIC Optional : public BaseParser<Optional<T>> {
  public:
   explicit Optional(const T& parser) noexcept : parser_{parser} {}
 
@@ -230,7 +255,7 @@ constexpr TINY_PARSE_PUBLIC Optional<T> operator~(const T& parser) noexcept {
  * @tparam T The parser to match.
  */
 template <class T>
-class TINY_PARSE_PUBLIC Many : public Parser<Many<T>> {
+class TINY_PARSE_PUBLIC Many : public BaseParser<Many<T>> {
  public:
   explicit Many(const T& parser) noexcept : parser_{parser} {}
 
@@ -263,7 +288,7 @@ constexpr TINY_PARSE_PUBLIC Many<T> operator*(const T& parser) noexcept {
  * @tparam T The parser to match.
  */
 template <class T>
-class TINY_PARSE_PUBLIC Times : public Parser<Times<T>> {
+class TINY_PARSE_PUBLIC Times : public BaseParser<Times<T>> {
  public:
   Times(size_t times, const T& parser) noexcept
       : times_{times}, parser_{parser} {}
@@ -312,7 +337,7 @@ constexpr TINY_PARSE_PUBLIC Times<T> operator*(const T& parser,
  * @tparam T The parser to match.
  */
 template <class T>
-class TINY_PARSE_PUBLIC GreaterThan : public Parser<GreaterThan<T>> {
+class TINY_PARSE_PUBLIC GreaterThan : public BaseParser<GreaterThan<T>> {
  public:
   GreaterThan(size_t min, const T& parser) noexcept
       : min_{min}, parser_{parser} {}
@@ -366,7 +391,7 @@ constexpr TINY_PARSE_PUBLIC GreaterThan<T> operator+(const T& parser) noexcept {
  * @tparam T The parser to match.
  */
 template <class T>
-class TINY_PARSE_PUBLIC LessThan : public Parser<LessThan<T>> {
+class TINY_PARSE_PUBLIC LessThan : public BaseParser<LessThan<T>> {
  public:
   LessThan(size_t max, const T& parser) noexcept : max_{max}, parser_{parser} {}
   constexpr size_t min_length() const noexcept override { return 0; }
