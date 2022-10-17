@@ -10,7 +10,7 @@ namespace tiny_parse::built_in {
  * @tparam C The character to match.
  */
 template <char C>
-class TINY_PARSE_PUBLIC CharP : public Parser<CharP<C>> {
+class TINY_PARSE_PUBLIC CharP : public BaseParser<CharP<C>> {
  public:
   constexpr size_t min_length() const noexcept override { return 1; }
 
@@ -28,7 +28,7 @@ class TINY_PARSE_PUBLIC CharP : public Parser<CharP<C>> {
  * @tparam upper Upper bound of the range.
  */
 template <char lower, char upper>
-class TINY_PARSE_PUBLIC RangeP : public Parser<RangeP<lower, upper>> {
+class TINY_PARSE_PUBLIC RangeP : public BaseParser<RangeP<lower, upper>> {
  public:
   constexpr size_t min_length() const noexcept override { return 1; }
 
@@ -43,7 +43,7 @@ class TINY_PARSE_PUBLIC RangeP : public Parser<RangeP<lower, upper>> {
 /**
  * @brief A parser that matches any single character.
  */
-class TINY_PARSE_PUBLIC AnyP : public Parser<AnyP> {
+class TINY_PARSE_PUBLIC AnyP : public BaseParser<AnyP> {
  public:
   constexpr size_t min_length() const noexcept override { return 1; }
 
