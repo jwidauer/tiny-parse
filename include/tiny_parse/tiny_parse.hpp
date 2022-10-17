@@ -79,7 +79,7 @@ template <class Derived>
 class TINY_PARSE_PUBLIC BaseParser : public Parser {
  public:
   BaseParser() = default;
-  virtual ~BaseParser() = default;
+  ~BaseParser() override = default;
 
   /**
    * @brief Create a copy of this parser.
@@ -108,7 +108,7 @@ class TINY_PARSE_PUBLIC BaseParser : public Parser {
    * @param sv The string to parse
    * @return Result The result of the parse.
    */
-  inline Result parse(const std::string_view& sv) const {
+  inline Result parse(const std::string_view& sv) const final {
     const auto result = parse_it(sv);
 
     if (consumer_ && result.success)
