@@ -34,8 +34,7 @@ class TINY_PARSE_PUBLIC RangeP : public BaseParser<RangeP<lower, upper>> {
 
  protected:
   constexpr Result parse_it(const std::string_view& sv) const noexcept override {
-    if (!sv.empty() && sv.front() >= lower && sv.front() <= upper)
-      return {sv.substr(1), true};
+    if (!sv.empty() && sv.front() >= lower && sv.front() <= upper) return {sv.substr(1), true};
     return {sv, false};
   }
 };
