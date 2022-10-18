@@ -70,4 +70,22 @@ const auto upper_case_character = RangeP<'A', 'Z'>{};
 
 const auto letter = lower_case_character | upper_case_character;
 
+const auto alphanumeric = letter | digit;
+
+const auto dash = CharP<'-'>{};
+
+const auto dot = CharP<'.'>{};
+
+const auto underscore = CharP<'_'>{};
+
+const auto space = CharP<' '>{};
+
+const auto tab = CharP<'\t'>{};
+
+const auto newline = CharP<'\n'>{};
+
+const auto carriage_return = CharP<'\r'>{};
+
+const auto whitespace = space | tab | newline | carriage_return;
+
 }  // namespace tiny_parse::built_in
