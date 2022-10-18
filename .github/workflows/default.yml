@@ -65,7 +65,7 @@ jobs:
         uses: mattnotmitt/doxygen-action@1.9.4
         with:
           working-directory: docs
-          doxyfile-path: docs/Doxyfile
+          doxyfile-path: Doxyfile
       - name: Upload documentation as artifact
         uses: actions/upload-artifact@v3
         with:
