@@ -16,8 +16,7 @@ class Validator {
     uint8_t byte{};
     auto [ptr, ec]{std::from_chars(sv.begin(), sv.end(), byte)};
     if (ec != std::errc())
-      throw std::invalid_argument{"Value \"" + std::string(sv) +
-                                  "\" not in range [0, 255]"};
+      throw std::invalid_argument{"Value \"" + std::string(sv) + "\" not in range [0, 255]"};
 
     ip_.push_back(byte);
   }
@@ -35,8 +34,7 @@ int main() {
 
   // Define what constitutes a digit
   auto byte = built_in::whole_number;
-  byte.consumer(
-      std::bind(&Validator::validate_byte, &validator, std::placeholders::_1));
+  byte.consumer(std::bind(&Validator::validate_byte, &validator, std::placeholders::_1));
 
   auto dot = built_in::CharP<'.'>{};
   auto ip_parser = byte & dot & byte & dot & byte & dot & byte;
