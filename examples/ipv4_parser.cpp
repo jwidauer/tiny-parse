@@ -12,9 +12,9 @@ class Validator {
   Validator() = default;
   ~Validator() = default;
 
-  void validate_byte(const std::string_view& sv) {
+  void validate_byte(std::string_view sv) {
     uint8_t byte{};
-    auto [ptr, ec]{std::from_chars(sv.begin(), sv.end(), byte)};
+    auto [ptr, ec]{std::from_chars(sv.data(), sv.data() + sv.size(), byte)};
     if (ec != std::errc())
       throw std::invalid_argument{"Value \"" + std::string(sv) + "\" not in range [0, 255]"};
 

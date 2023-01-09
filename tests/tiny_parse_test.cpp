@@ -49,7 +49,7 @@ TEST_CASE("Consumer") {
 
   SUBCASE("Validity") {
     bool called = false;
-    const auto consumer = [&called](const std::string_view& sv) {
+    const auto consumer = [&called](std::string_view sv) {
       CHECK(sv == "a");
       called = true;
     };
@@ -68,7 +68,7 @@ TEST_CASE("Consumer") {
 
   SUBCASE("Consumer throws") {
     bool called = false;
-    const auto consumer = [&called](const std::string_view& sv) {
+    const auto consumer = [&called](std::string_view sv) {
       CHECK(sv == "a");
       called = true;
       throw std::runtime_error{"error"};
