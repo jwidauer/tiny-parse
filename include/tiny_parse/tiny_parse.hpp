@@ -155,12 +155,12 @@ class TINY_PARSE_PUBLIC Or : public BaseParser<Or<T, S>> {
  public:
   Or(const T& p1, const S& p2) noexcept : parser1_{p1}, parser2_{p2} {}
 
-  constexpr size_t min_length() const noexcept override {
+  size_t min_length() const noexcept override {
     return std::min(parser1_.min_length(), parser2_.min_length());
   }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const noexcept override {
     if (const auto result = sv >> parser1_; result.success) return result;
     return sv >> parser2_;
   }
@@ -189,12 +189,12 @@ class TINY_PARSE_PUBLIC Then : public BaseParser<Then<T, S>> {
  public:
   Then(const T& p1, const S& p2) noexcept : parser1_{p1}, parser2_{p2} {}
 
-  constexpr size_t min_length() const noexcept override {
+  size_t min_length() const noexcept override {
     return parser1_.min_length() + parser2_.min_length();
   }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const noexcept override {
     auto result = sv >> parser1_;
 
     if (!result.success) return {sv, false};
@@ -225,10 +225,10 @@ class TINY_PARSE_PUBLIC Optional : public BaseParser<Optional<T>> {
  public:
   explicit Optional(const T& parser) noexcept : parser_{parser} {}
 
-  constexpr size_t min_length() const noexcept override { return 0; }
+  size_t min_length() const noexcept override { return 0; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const noexcept override {
     return {parser_.parse(sv).value, true};
   }
 
@@ -252,10 +252,10 @@ class TINY_PARSE_PUBLIC Many : public BaseParser<Many<T>> {
  public:
   explicit Many(const T& parser) noexcept : parser_{parser} {}
 
-  constexpr size_t min_length() const noexcept override { return 0; }
+  size_t min_length() const noexcept override { return 0; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const noexcept override {
     auto result = sv >> parser_;
     while (result.success) {
       result = result >> parser_;
@@ -284,10 +284,10 @@ class TINY_PARSE_PUBLIC Times : public BaseParser<Times<T>> {
  public:
   Times(size_t times, const T& parser) noexcept : times_{times}, parser_{parser} {}
 
-  constexpr size_t min_length() const noexcept override { return parser_.min_length() * times_; }
+  size_t min_length() const noexcept override { return parser_.min_length() * times_; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const noexcept override {
     size_t i = 1;
     auto result = sv >> parser_;
     for (; result.success && i < times_; ++i) {
@@ -327,12 +327,10 @@ class TINY_PARSE_PUBLIC GreaterThan : public BaseParser<GreaterThan<T>> {
  public:
   GreaterThan(size_t min, const T& parser) noexcept : min_{min}, parser_{parser} {}
 
-  constexpr size_t min_length() const noexcept override {
-    return (min_ + 1) * parser_.min_length();
-  }
+  size_t min_length() const noexcept override { return (min_ + 1) * parser_.min_length(); }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const noexcept override {
     size_t i = 0;
     auto result = sv >> parser_;
     while (result.success) {
@@ -376,10 +374,10 @@ template <class T>
 class TINY_PARSE_PUBLIC LessThan : public BaseParser<LessThan<T>> {
  public:
   LessThan(size_t max, const T& parser) noexcept : max_{max}, parser_{parser} {}
-  constexpr size_t min_length() const noexcept override { return 0; }
+  size_t min_length() const noexcept override { return 0; }
 
  protected:
-  constexpr Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const noexcept override {
     auto result = sv >> parser_;
     auto success = result.success;
     // Start at 2 because we already ran the parser once and want to stop at
