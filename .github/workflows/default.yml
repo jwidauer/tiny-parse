@@ -6,8 +6,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-      - name: Run clang-format
-        run: ./tools/run-clang-format.py -r examples include tests
+        with:
+          fetch-depth: 0
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.0
+
+      - name: Run commitlint
+        uses: wagoid/commitlint-github-action@v4
 
   build:
     name: Build
