@@ -55,7 +55,7 @@ class Parser {
  public:
   virtual ~Parser() = default;
 
-  virtual Result parse(const std::string_view& sv) const = 0;
+  [[nodiscard]] virtual Result parse(const std::string_view& sv) const = 0;
 };
 
 /**
@@ -92,7 +92,7 @@ class BaseParser : public Parser {
    * @param sv The string to parse
    * @return Result The result of the parse.
    */
-  inline Result parse(const std::string_view& sv) const final {
+  [[nodiscard]] inline Result parse(const std::string_view& sv) const final {
     const auto result = parse_it(sv);
 
     if (consumer_ && result.success) consumer_(sv.substr(0, sv.size() - result.value.size()));
@@ -104,10 +104,10 @@ class BaseParser : public Parser {
    * @brief The minimum number of parsed characters that constitute a full
    * parse
    */
-  virtual size_t min_length() const noexcept = 0;
+  [[nodiscard]] virtual size_t min_length() const noexcept = 0;
 
  protected:
-  virtual Result parse_it(const std::string_view& sv) const = 0;
+  [[nodiscard]] virtual Result parse_it(const std::string_view& sv) const = 0;
 
  private:
   Consumer consumer_;
@@ -139,12 +139,12 @@ class Or : public BaseParser<Or<T, S>> {
  public:
   Or(const T& p1, const S& p2) noexcept : parser1_{p1}, parser2_{p2} {}
 
-  size_t min_length() const noexcept override {
+  [[nodiscard]] size_t min_length() const noexcept override {
     return std::min(parser1_.min_length(), parser2_.min_length());
   }
 
  protected:
-  Result parse_it(const std::string_view& sv) const override {
+  [[nodiscard]] Result parse_it(const std::string_view& sv) const override {
     if (const auto result = sv >> parser1_; result.success) return result;
     return sv >> parser2_;
   }
@@ -173,12 +173,12 @@ class Then : public BaseParser<Then<T, S>> {
  public:
   Then(const T& p1, const S& p2) noexcept : parser1_{p1}, parser2_{p2} {}
 
-  size_t min_length() const noexcept override {
+  [[nodiscard]] size_t min_length() const noexcept override {
     return parser1_.min_length() + parser2_.min_length();
   }
 
  protected:
-  Result parse_it(const std::string_view& sv) const override {
+  [[nodiscard]] Result parse_it(const std::string_view& sv) const override {
     auto result = sv >> parser1_;
 
     if (!result.success) return {sv, false};
@@ -209,10 +209,10 @@ class Optional : public BaseParser<Optional<T>> {
  public:
   explicit Optional(const T& parser) noexcept : parser_{parser} {}
 
-  size_t min_length() const noexcept override { return 0; }
+  [[nodiscard]] size_t min_length() const noexcept override { return 0; }
 
  protected:
-  Result parse_it(const std::string_view& sv) const override {
+  [[nodiscard]] Result parse_it(const std::string_view& sv) const override {
     return {parser_.parse(sv).value, true};
   }
 
@@ -236,10 +236,10 @@ class Many : public BaseParser<Many<T>> {
  public:
   explicit Many(const T& parser) noexcept : parser_{parser} {}
 
-  size_t min_length() const noexcept override { return 0; }
+  [[nodiscard]] size_t min_length() const noexcept override { return 0; }
 
  protected:
-  Result parse_it(const std::string_view& sv) const override {
+  [[nodiscard]] Result parse_it(const std::string_view& sv) const override {
     auto result = sv >> parser_;
     while (result.success) {
       result = result >> parser_;
@@ -268,10 +268,12 @@ class Times : public BaseParser<Times<T>> {
  public:
   Times(size_t times, const T& parser) noexcept : times_{times}, parser_{parser} {}
 
-  size_t min_length() const noexcept override { return parser_.min_length() * times_; }
+  [[nodiscard]] size_t min_length() const noexcept override {
+    return parser_.min_length() * times_;
+  }
 
  protected:
-  Result parse_it(const std::string_view& sv) const override {
+  [[nodiscard]] Result parse_it(const std::string_view& sv) const override {
     size_t i = 1;
     auto result = sv >> parser_;
     for (; result.success && i < times_; ++i) {
@@ -311,10 +313,12 @@ class GreaterThan : public BaseParser<GreaterThan<T>> {
  public:
   GreaterThan(size_t min, const T& parser) noexcept : min_{min}, parser_{parser} {}
 
-  size_t min_length() const noexcept override { return (min_ + 1) * parser_.min_length(); }
+  [[nodiscard]] size_t min_length() const noexcept override {
+    return (min_ + 1) * parser_.min_length();
+  }
 
  protected:
-  Result parse_it(const std::string_view& sv) const override {
+  [[nodiscard]] Result parse_it(const std::string_view& sv) const override {
     size_t i = 0;
     auto result = sv >> parser_;
     while (result.success) {
@@ -358,10 +362,10 @@ template <class T>
 class LessThan : public BaseParser<LessThan<T>> {
  public:
   LessThan(size_t max, const T& parser) noexcept : max_{max}, parser_{parser} {}
-  size_t min_length() const noexcept override { return 0; }
+  [[nodiscard]] size_t min_length() const noexcept override { return 0; }
 
  protected:
-  Result parse_it(const std::string_view& sv) const override {
+  [[nodiscard]] Result parse_it(const std::string_view& sv) const override {
     auto result = sv >> parser_;
     auto success = result.success;
     // Start at 2 because we already ran the parser once and want to stop at

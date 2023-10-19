@@ -66,68 +66,77 @@ struct Consumer {
 };
 
 TEST_CASE("Consumer") {
-  namespace tp = tiny_parse::built_in;
+  namespace tp = tiny_parse;
+  namespace tpi = tiny_parse::built_in;
 
   SUBCASE("Validity") {
     Consumer consumer{"a"};
     const auto callback = [&](std::string_view sv) { consumer.consume(sv); };
-    auto parser = tp::CharP<'a'>{}.consumer(callback);
+    auto parser = tpi::CharP<'a'>{}.consumer(callback);
 
     SUBCASE("Valid case") {
-      parser.parse("a");
+      const auto res = parser.parse("a");
       CHECK(consumer.was_called());
+      CHECK(res == tp::Result{"", true});
     }
 
     SUBCASE("Invalid case") {
-      parser.parse("b");
+      const auto res = parser.parse("b");
       CHECK(!consumer.was_called());
+      CHECK(res == tp::Result{"b", false});
     }
   }
 
   SUBCASE("Consumer throws") {
     Consumer<true> consumer{"a"};
     const auto callback = [&](std::string_view sv) { consumer.consume(sv); };
-    auto throwing_parser = tp::CharP<'a'>{}.consumer(callback);
+    auto throwing_parser = tpi::CharP<'a'>{}.consumer(callback);
 
     SUBCASE("simple parser") {
       auto parser = throwing_parser;
       SUBCASE("Valid case") {
-        CHECK_THROWS_AS(parser.parse("a"), std::runtime_error);
+        CHECK_THROWS_AS({ [[maybe_unused]] const auto res = parser.parse("a"); },
+                        std::runtime_error);
         CHECK(consumer.was_called());
       }
 
       SUBCASE("Invalid case") {
-        parser.parse("b");
+        const auto res = parser.parse("b");
         CHECK(!consumer.was_called());
+        CHECK(res == tp::Result{"b", false});
       }
     }
 
     SUBCASE("parser with a then") {
       SUBCASE("throwing first") {
-        auto parser = throwing_parser & tp::CharP<'b'>{};
+        auto parser = throwing_parser & tpi::CharP<'b'>{};
 
         SUBCASE("Valid case") {
-          CHECK_THROWS_AS(parser.parse("ab"), std::runtime_error);
+          CHECK_THROWS_AS({ [[maybe_unused]] const auto res = parser.parse("ab"); },
+                          std::runtime_error);
           CHECK(consumer.was_called());
         }
 
         SUBCASE("Invalid case") {
-          parser.parse("b");
+          const auto res = parser.parse("b");
           CHECK(!consumer.was_called());
+          CHECK(res == tp::Result{"b", false});
         }
       }
 
       SUBCASE("throwing second") {
-        auto parser = tp::CharP<'b'>{} & throwing_parser;
+        auto parser = tpi::CharP<'b'>{} & throwing_parser;
 
         SUBCASE("Valid case") {
-          CHECK_THROWS_AS(parser.parse("ba"), std::runtime_error);
+          CHECK_THROWS_AS({ [[maybe_unused]] const auto res = parser.parse("ba"); },
+                          std::runtime_error);
           CHECK(consumer.was_called());
         }
 
         SUBCASE("Invalid case") {
-          parser.parse("a");
+          const auto res = parser.parse("a");
           CHECK(!consumer.was_called());
+          CHECK(res == tp::Result{"a", false});
         }
       }
     }
