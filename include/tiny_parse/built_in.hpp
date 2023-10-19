@@ -15,7 +15,7 @@ class CharP : public BaseParser<CharP<C>> {
   size_t min_length() const noexcept override { return 1; }
 
  protected:
-  Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const override {
     if (!sv.empty() && sv.front() == C) return {sv.substr(1), true};
     return {sv, false};
   }
@@ -33,7 +33,7 @@ class RangeP : public BaseParser<RangeP<lower, upper>> {
   size_t min_length() const noexcept override { return 1; }
 
  protected:
-  Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const override {
     if (!sv.empty() && sv.front() >= lower && sv.front() <= upper) return {sv.substr(1), true};
     return {sv, false};
   }
@@ -47,7 +47,7 @@ class AnyP : public BaseParser<AnyP> {
   size_t min_length() const noexcept override { return 1; }
 
  protected:
-  Result parse_it(const std::string_view& sv) const noexcept override {
+  Result parse_it(const std::string_view& sv) const override {
     if (!sv.empty()) return {sv.substr(1), true};
     return {sv, false};
   }
