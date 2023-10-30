@@ -1,11 +1,16 @@
+#include <algorithm>
 #include <charconv>
+#include <cstdint>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <system_error>
 #include <tiny_parse/built_in.hpp>
 #include <tiny_parse/tiny_parse.hpp>
+#include <vector>
 
 class Validator {
  public:

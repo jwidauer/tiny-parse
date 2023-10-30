@@ -4,8 +4,11 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest.h>
 
-#include <functional>
 #include <iostream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
 
 TEST_SUITE_BEGIN("tiny_parse");
 
