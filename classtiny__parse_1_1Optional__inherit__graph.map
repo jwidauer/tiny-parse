@@ -1,5 +1,5 @@
 <map id="tiny_parse::Optional&lt; T &gt;" name="tiny_parse::Optional&lt; T &gt;">
-<area shape="rect" id="node1" title="A parser that optionally matches the given parser." alt="" coords="5,169,171,196"/>
-<area shape="rect" id="node2" href="$classtiny__parse_1_1BaseParser.html" title=" " alt="" coords="11,80,165,121"/>
-<area shape="rect" id="node3" href="$classtiny__parse_1_1Parser.html" title="Abstract base class for parsers." alt="" coords="25,5,151,32"/>
+<area shape="rect" id="node1" title="A parser that optionally matches the given parser." alt="" coords="5,167,171,192"/>
+<area shape="rect" id="node2" href="$classtiny__parse_1_1BaseParser.html" title=" " alt="" coords="11,79,165,119"/>
+<area shape="rect" id="node3" href="$classtiny__parse_1_1Parser.html" title="Abstract base class for parsers." alt="" coords="25,5,151,31"/>
 </map>
