@@ -77,30 +77,35 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
       - name: Setup Sonar Scanner
-        uses: jwidauer/setup-sonar-scanner@v3
+        uses: SonarSource/sonarcloud-github-c-cpp@v2.0.2
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+
       - name: Install meson, ninja and gcovr
         run: pip install meson ninja gcovr
+
       - name: Run build-wrapper
         run: |
-          meson build -Db_coverage=true
+          meson setup build -Db_coverage=true
           build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} meson compile -C build
+
       - name: Run tests and generate coverage report
         run: |
           cd build
           ninja test
           ninja coverage
+
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner \
-            --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" \
             --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}" \
             --define sonar.coverageReportPaths=build/meson-logs/sonarqube.xml \
             --define sonar.coverage.exclusions=examples/*
@@ -112,16 +117,19 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+
       - name: Generate documentation
         uses: mattnotmitt/doxygen-action@v1.9.5
         with:
           working-directory: docs
           doxyfile-path: Doxyfile
+
       - name: Upload documentation as artifact
         uses: actions/upload-artifact@v3
         with:
           name: docs
           path: docs/html
+
       - name: Deploy documentation
         uses: JamesIves/github-pages-deploy-action@v4
         with:
