@@ -10,7 +10,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run pre-commit
-        uses: pre-commit/action@v3.0.0
+        uses: pre-commit/action@v3.0.1
 
       - name: Run commitlint
         uses: wagoid/commitlint-github-action@v5
